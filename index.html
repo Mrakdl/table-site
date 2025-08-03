@@ -4,10 +4,87 @@
   <meta charset="UTF-8" />
   <title>Таблица предметов</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    input { margin: 4px; padding: 6px; }
+    :root {
+      --bg-color: #2e2e3e;       
+      --text-color: #dcd6f7;     
+      --accent-color: #9b59b6;   
+      --input-bg: #454559;
+      --input-border: #6e5494;
+      --table-border: #6e5494;
+      --button-bg: #9b59b6;
+      --button-hover-bg: #7a3f9c;
+    }
+
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: var(--accent-color);
+      margin-bottom: 15px;
+    }
+
+    input {
+      margin: 6px 8px 6px 0;
+      padding: 8px 12px;
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input::placeholder {
+      color: #b3aefb;
+    }
+    input:focus {
+      border-color: var(--accent-color);
+      outline: none;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: var(--button-bg);
+      color: var(--text-color);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: var(--button-hover-bg);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+      background-color: #3b3b54;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(155, 89, 182, 0.4);
+    }
+    th, td {
+      border: 1px solid var(--table-border);
+      padding: 12px 15px;
+      text-align: left;
+      color: var(--text-color);
+      font-size: 14px;
+    }
+    th {
+      background-color: #5f4b8b;
+      font-weight: 700;
+    }
+    tbody tr:hover {
+      background-color: #574479;
+    }
   </style>
 </head>
 <body>
