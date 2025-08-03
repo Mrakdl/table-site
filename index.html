@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Таблица предметов</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    input { margin: 4px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Предметы</h1>
+
+  <input id="search" placeholder="Поиск...">
+  <br>
+  <input id="mod" placeholder="Мод">
+  <input id="itemId" placeholder="ID предмета">
+  <input id="price" placeholder="Цена">
+  <button onclick="addItem()">Добавить</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Мод</th>
+        <th>ID предмета</th>
+        <th>Цена</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
+      authDomain: "items-table.firebaseapp.com",
+      databaseURL: "https://items-table-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "items-table",
+      storageBucket: "items-table.firebasestorage.app",
+      messagingSenderId: "6458579493",
+      appId: "1:6458579493:web:2cae8479d416be37723dcc",
+      measurementId: "G-E3B59T1VYJ"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const tableBody = document.getElementById("tableBody");
+    const searchInput = document.getElementById("search");
+
+    function addItem() {
+      const mod = document.getElementById("mod").value.trim();
+      const itemId = document.getElementById("itemId").value.trim();
+      const price = document.getElementById("price").value.trim();
+
+      if (!mod || !itemId || !price) return alert("Заполните все поля");
+
+      const newItemRef = db.ref("items").push();
+      newItemRef.set({ mod, itemId, price });
+
+      document.getElementById("mod").value = "";
+      document.getElementById("itemId").value = "";
+      document.getElementById("price").value = "";
+    }
+
+    function renderTable(data) {
+      tableBody.innerHTML = "";
+      Object.entries(data).forEach(([key, item]) => {
+        const row = document.createElement("tr");
+        if (filter(item)) {
+          row.innerHTML = `<td>${item.mod}</td><td>${item.itemId}</td><td>${item.price}</td>`;
+          tableBody.appendChild(row);
+        }
+      });
+    }
+
+    function filter(item) {
+      const q = searchInput.value.toLowerCase();
+      return (
+        item.mod.toLowerCase().includes(q) ||
+        item.itemId.toLowerCase().includes(q) ||
+        item.price.toLowerCase().includes(q)
+      );
+    }
+
+    db.ref("items").on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      renderTable(data);
+    });
+
+    searchInput.addEventListener("input", () => {
+      db.ref("items").once("value").then(snapshot => {
+        const data = snapshot.val() || {};
+        renderTable(data);
+      });
+    });
+  </script>
+</body>
+</html>
