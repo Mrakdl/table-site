@@ -5,9 +5,9 @@
   <title>Таблица предметов</title>
   <style>
     :root {
-      --bg-color: #2e2e3e;       
-      --text-color: #dcd6f7;     
-      --accent-color: #9b59b6;   
+      --bg-color: #2e2e3e;
+      --text-color: #dcd6f7;
+      --accent-color: #9b59b6;
       --input-bg: #454559;
       --input-border: #6e5494;
       --table-border: #6e5494;
@@ -85,16 +85,34 @@
     tbody tr:hover {
       background-color: #574479;
     }
+    #searchContainer {
+      margin-bottom: 10px;
+    }
+    #search {
+      width: 200px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    #searchBtn {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+      padding: 7px 14px;
+    }
   </style>
 </head>
 <body>
   <h1>Предметы</h1>
 
-  <input id="search" placeholder="Поиск...">
-  <br>
+  <div id="searchContainer">
+    <input id="search" placeholder="Поиск...">
+    <button id="searchBtn">Поиск</button>
+  </div>
+
   <input id="mod" placeholder="Мод">
   <input id="itemId" placeholder="ID предмета">
-  <input id="price" placeholder="Цена">
+  <input id="priceMin" placeholder="Цена MIN">
+  <input id="priceMax" placeholder="Цена MAX">
   <button onclick="addItem()">Добавить</button>
 
   <table>
@@ -102,7 +120,8 @@
       <tr>
         <th>Мод</th>
         <th>ID предмета</th>
-        <th>Цена</th>
+        <th>Цена MIN</th>
+        <th>Цена MAX</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -128,28 +147,31 @@
 
     const tableBody = document.getElementById("tableBody");
     const searchInput = document.getElementById("search");
+    const searchBtn = document.getElementById("searchBtn");
 
     function addItem() {
       const mod = document.getElementById("mod").value.trim();
       const itemId = document.getElementById("itemId").value.trim();
-      const price = document.getElementById("price").value.trim();
+      const priceMin = document.getElementById("priceMin").value.trim();
+      const priceMax = document.getElementById("priceMax").value.trim();
 
-      if (!mod || !itemId || !price) return alert("Заполните все поля");
+      if (!mod || !itemId || !priceMin || !priceMax) return alert("Заполните все поля");
 
       const newItemRef = db.ref("items").push();
-      newItemRef.set({ mod, itemId, price });
+      newItemRef.set({ mod, itemId, priceMin, priceMax });
 
       document.getElementById("mod").value = "";
       document.getElementById("itemId").value = "";
-      document.getElementById("price").value = "";
+      document.getElementById("priceMin").value = "";
+      document.getElementById("priceMax").value = "";
     }
 
     function renderTable(data) {
       tableBody.innerHTML = "";
       Object.entries(data).forEach(([key, item]) => {
-        const row = document.createElement("tr");
         if (filter(item)) {
-          row.innerHTML = `<td>${item.mod}</td><td>${item.itemId}</td><td>${item.price}</td>`;
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${item.mod}</td><td>${item.itemId}</td><td>${item.priceMin}</td><td>${item.priceMax}</td>`;
           tableBody.appendChild(row);
         }
       });
@@ -160,7 +182,8 @@
       return (
         item.mod.toLowerCase().includes(q) ||
         item.itemId.toLowerCase().includes(q) ||
-        item.price.toLowerCase().includes(q)
+        item.priceMin.toLowerCase().includes(q) ||
+        item.priceMax.toLowerCase().includes(q)
       );
     }
 
@@ -170,6 +193,13 @@
     });
 
     searchInput.addEventListener("input", () => {
+      db.ref("items").once("value").then(snapshot => {
+        const data = snapshot.val() || {};
+        renderTable(data);
+      });
+    });
+
+    searchBtn.addEventListener("click", () => {
       db.ref("items").once("value").then(snapshot => {
         const data = snapshot.val() || {};
         renderTable(data);
