@@ -88,7 +88,6 @@
     tbody tr:hover {
       background-color: #574479;
     }
-
     #searchContainer {
       margin-bottom: 10px;
     }
@@ -103,8 +102,6 @@
       margin-left: 8px;
       padding: 7px 14px;
     }
-
-    /* Кнопка удаления */
     .deleteBtn {
       background-color: var(--delete-btn-bg);
       padding: 6px 10px;
@@ -128,6 +125,7 @@
 
   <input id="mod" placeholder="Мод">
   <input id="itemId" placeholder="ID предмета" inputmode="numeric" pattern="[0-9]*" title="Только цифры" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+  <input id="itemName" placeholder="Название предмета">
   <input id="priceMin" placeholder="Цена MIN" inputmode="numeric" pattern="[0-9]*" title="Только цифры" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
   <input id="priceMax" placeholder="Цена MAX" inputmode="numeric" pattern="[0-9]*" title="Только цифры" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
   <button onclick="addItem()">Добавить</button>
@@ -137,6 +135,7 @@
       <tr>
         <th>Мод</th>
         <th>ID предмета</th>
+        <th>Название предмета</th>
         <th>Цена MIN</th>
         <th>Цена MAX</th>
         <th>Удалить</th>
@@ -170,10 +169,11 @@
     function addItem() {
       const mod = document.getElementById("mod").value.trim();
       const itemId = document.getElementById("itemId").value.trim();
+      const itemName = document.getElementById("itemName").value.trim();
       const priceMin = document.getElementById("priceMin").value.trim();
       const priceMax = document.getElementById("priceMax").value.trim();
 
-      if (!mod || !itemId || !priceMin || !priceMax) {
+      if (!mod || !itemId || !itemName || !priceMin || !priceMax) {
         alert("Заполните все поля");
         return;
       }
@@ -187,10 +187,11 @@
       }
 
       const newItemRef = db.ref("items").push();
-      newItemRef.set({ mod, itemId, priceMin, priceMax });
+      newItemRef.set({ mod, itemId, itemName, priceMin, priceMax });
 
       document.getElementById("mod").value = "";
       document.getElementById("itemId").value = "";
+      document.getElementById("itemName").value = "";
       document.getElementById("priceMin").value = "";
       document.getElementById("priceMax").value = "";
     }
@@ -203,6 +204,7 @@
           row.innerHTML = `
             <td>${item.mod}</td>
             <td>${item.itemId}</td>
+            <td>${item.itemName}</td>
             <td>${item.priceMin}</td>
             <td>${item.priceMax}</td>
             <td><button class="deleteBtn" onclick="deleteItem('${key}')">Удалить</button></td>
@@ -217,6 +219,7 @@
       return (
         item.mod.toLowerCase().includes(q) ||
         item.itemId.toLowerCase().includes(q) ||
+        item.itemName.toLowerCase().includes(q) ||
         item.priceMin.toLowerCase().includes(q) ||
         item.priceMax.toLowerCase().includes(q)
       );
