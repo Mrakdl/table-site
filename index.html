@@ -1,226 +1,208 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Таблица предметов</title>
   <style>
-    :root {
-      --bg-color: #2e2e3e;
-      --text-color: #dcd6f7;
-      --accent-color: #9b59b6;
-      --input-bg: #454559;
-      --input-border: #6e5494;
-      --table-border: #6e5494;
-      --button-bg: #9b59b6;
-      --button-hover-bg: #7a3f9c;
-      --delete-btn-bg: #c94f6d;
-      --delete-btn-hover-bg: #a53956;
+    body { background: #2e2e3e; color: #eee; font-family: sans-serif; padding: 20px; }
+    input, button {
+      background: #444;
+      color: #eee;
+      border: 1px solid #666;
+      padding: 6px 10px;
+      margin: 5px;
     }
-
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin: 0;
-      min-height: 100vh;
-    }
-
-    h1 {
-      color: var(--accent-color);
-      margin-bottom: 15px;
-    }
-
-    input {
-      margin: 6px 8px 6px 0;
-      padding: 8px 12px;
-      border: 1px solid var(--input-border);
-      border-radius: 4px;
-      background-color: var(--input-bg);
-      color: var(--text-color);
-      font-size: 14px;
-    }
-    input::placeholder {
-      color: #b3aefb;
-    }
-    input:focus {
-      border-color: var(--accent-color);
-      outline: none;
-    }
-
-    button {
-      padding: 8px 16px;
-      background-color: var(--button-bg);
-      color: var(--text-color);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background-color 0.3s;
-      font-size: 14px;
-    }
-    button:hover {
-      background-color: var(--button-hover-bg);
-    }
-
     table {
-      border-collapse: collapse;
       width: 100%;
+      border-collapse: collapse;
       margin-top: 20px;
-      background-color: #3b3b54;
-      border-radius: 6px;
-      overflow: hidden;
+      background: #3b3b54;
     }
     th, td {
-      border: 1px solid var(--table-border);
-      padding: 12px 15px;
-      text-align: left;
-      color: var(--text-color);
-      font-size: 14px;
+      border: 1px solid #666;
+      padding: 8px;
     }
     th {
-      background-color: #5f4b8b;
+      background: #5f4b8b;
     }
-
     tbody tr:hover {
-      background-color: #574479;
-    }
-
-    .deleteBtn {
-      background-color: var(--delete-btn-bg);
-      padding: 6px 10px;
-      font-size: 13px;
-      border-radius: 4px;
-      font-weight: 700;
-    }
-    .deleteBtn:hover {
-      background-color: var(--delete-btn-hover-bg);
-    }
-
-    #searchContainer {
-      margin-bottom: 10px;
+      background: #574479;
     }
   </style>
 </head>
 <body>
-  <h1>Предметы</h1>
 
-  <div id="searchContainer">
-    <input id="search" placeholder="Поиск по ID предмета...">
-    <button id="searchBtn">Поиск</button>
-  </div>
+<h2>Импорт предметов из CSV</h2>
+<input type="file" id="csvInput" accept=".csv">
+<button onclick="importCSV()">Загрузить CSV</button>
 
-  <input id="mod" placeholder="Мод">
-  <input id="itemId" placeholder="ID предмета" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-  <input id="meta" placeholder="Meta" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-  <input id="itemName" placeholder="Название предмета">
-  <input id="priceMin" placeholder="Цена MIN" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-  <input id="priceMax" placeholder="Цена MAX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-  <button onclick="addItem()">Добавить</button>
+<h2>Добавление / редактирование</h2>
+<input id="mod" placeholder="Мод">
+<input id="itemId" placeholder="ID" type="number">
+<input id="meta" placeholder="Meta" type="number">
+<input id="itemName" placeholder="Название">
+<input id="priceMin" placeholder="Мин. цена" type="number">
+<input id="priceMax" placeholder="Макс. цена" type="number">
+<button id="saveBtn" onclick="saveItem()">Добавить</button>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Mod:ID [Meta]</th>
-        <th>Название</th>
-        <th>Цена MIN</th>
-        <th>Цена MAX</th>
-        <th>Удалить</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+<h2>Поиск</h2>
+<input id="search" placeholder="minecraft:planks:2">
+<button onclick="applySearch()">Искать</button>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<h2>Таблица предметов</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Mod</th>
+      <th>ID</th>
+      <th>Meta</th>
+      <th>Название</th>
+      <th>Мин</th>
+      <th>Макс</th>
+      <th>Действия</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
-      authDomain: "items-table.firebaseapp.com",
-      databaseURL: "https://items-table-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "items-table",
-      storageBucket: "items-table.firebasestorage.app",
-      messagingSenderId: "6458579493",
-      appId: "1:6458579493:web:2cae8479d416be37723dcc",
-      measurementId: "G-E3B59T1VYJ"
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
+    authDomain: "items-table.firebaseapp.com",
+    databaseURL: "https://items-table-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "items-table",
+    storageBucket: "items-table.firebasestorage.app",
+    messagingSenderId: "6458579493",
+    appId: "1:6458579493:web:2cae8479d416be37723dcc",
+    measurementId: "G-E3B59T1VYJ"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let editingKey = null;
+
+  function importCSV() {
+    const fileInput = document.getElementById("csvInput");
+    const file = fileInput.files[0];
+    if (!file) return alert("Выберите CSV-файл");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const lines = e.target.result.split("\n");
+      lines.shift(); // Пропускаем заголовок
+      lines.forEach(line => {
+        const [raw, name] = line.split(",");
+        if (!raw || !name) return;
+        const parts = raw.trim().split(":");
+        if (parts.length !== 3) return;
+
+        const [mod, itemId, meta] = parts;
+        const item = {
+          mod: mod.trim(),
+          itemId: itemId.trim(),
+          meta: meta.trim(),
+          itemName: name.trim(),
+          priceMin: "",
+          priceMax: ""
+        };
+        db.ref("items").push(item);
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  function saveItem() {
+    const item = {
+      mod: document.getElementById("mod").value.trim(),
+      itemId: document.getElementById("itemId").value.trim(),
+      meta: document.getElementById("meta").value.trim(),
+      itemName: document.getElementById("itemName").value.trim(),
+      priceMin: document.getElementById("priceMin").value.trim(),
+      priceMax: document.getElementById("priceMax").value.trim()
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    if (!item.mod || !item.itemId || !item.itemName) return alert("Mod, ID и название обязательны");
 
-    const tableBody = document.getElementById("tableBody");
-    const searchInput = document.getElementById("search");
-    const searchBtn = document.getElementById("searchBtn");
-
-    function addItem() {
-      const mod = document.getElementById("mod").value.trim();
-      const itemId = document.getElementById("itemId").value.trim();
-      const meta = document.getElementById("meta").value.trim();
-      const itemName = document.getElementById("itemName").value.trim();
-      const priceMin = document.getElementById("priceMin").value.trim();
-      const priceMax = document.getElementById("priceMax").value.trim();
-
-      if (!mod || !itemId || !meta || !itemName || !priceMin || !priceMax) {
-        alert("Заполните все поля");
-        return;
-      }
-
-      const newItemRef = db.ref("items").push();
-      newItemRef.set({ mod, itemId, meta, itemName, priceMin, priceMax });
-
-      ['mod', 'itemId', 'meta', 'itemName', 'priceMin', 'priceMax'].forEach(id => {
-        document.getElementById(id).value = '';
-      });
+    if (editingKey) {
+      db.ref("items/" + editingKey).set(item);
+      editingKey = null;
+      document.getElementById("saveBtn").innerText = "Добавить";
+    } else {
+      db.ref("items").push(item);
     }
 
-    function renderTable(data) {
-      tableBody.innerHTML = "";
+    clearForm();
+  }
+
+  function clearForm() {
+    document.getElementById("mod").value = "";
+    document.getElementById("itemId").value = "";
+    document.getElementById("meta").value = "";
+    document.getElementById("itemName").value = "";
+    document.getElementById("priceMin").value = "";
+    document.getElementById("priceMax").value = "";
+  }
+
+  function renderTable(data) {
+    const tableBody = document.getElementById("tableBody");
+    tableBody.innerHTML = "";
+    Object.entries(data).forEach(([key, item]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.mod}</td>
+        <td>${item.itemId}</td>
+        <td>${item.meta}</td>
+        <td>${item.itemName}</td>
+        <td>${item.priceMin || ""}</td>
+        <td>${item.priceMax || ""}</td>
+        <td>
+          <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">Изменить</button>
+          <button onclick="deleteItem('${key}')">Удалить</button>
+        </td>
+      `;
+      tableBody.appendChild(tr);
+    });
+  }
+
+  function editItem(key, item) {
+    document.getElementById("mod").value = item.mod;
+    document.getElementById("itemId").value = item.itemId;
+    document.getElementById("meta").value = item.meta;
+    document.getElementById("itemName").value = item.itemName;
+    document.getElementById("priceMin").value = item.priceMin || "";
+    document.getElementById("priceMax").value = item.priceMax || "";
+    editingKey = key;
+    document.getElementById("saveBtn").innerText = "Сохранить";
+  }
+
+  function deleteItem(key) {
+    if (confirm("Удалить этот предмет?")) {
+      db.ref("items/" + key).remove();
+    }
+  }
+
+  function applySearch() {
+    const query = document.getElementById("search").value.trim().toLowerCase();
+    db.ref("items").once("value").then(snapshot => {
+      const data = snapshot.val() || {};
+      const filtered = {};
       Object.entries(data).forEach(([key, item]) => {
-        if (filter(item)) {
-          const row = document.createElement("tr");
-          const fullId = `${item.mod}:${item.itemId} [${item.meta}]`;
-          row.innerHTML = `
-            <td>${fullId}</td>
-            <td>${item.itemName}</td>
-            <td>${item.priceMin}</td>
-            <td>${item.priceMax}</td>
-            <td><button class="deleteBtn" onclick="deleteItem('${key}')">Удалить</button></td>
-          `;
-          tableBody.appendChild(row);
+        const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
+        if (fullId.includes(query)) {
+          filtered[key] = item;
         }
       });
-    }
-
-    function filter(item) {
-      const q = searchInput.value.toLowerCase();
-      return item.itemId.toLowerCase().includes(q);
-    }
-
-    function deleteItem(key) {
-      if (confirm("Удалить эту запись?")) {
-        db.ref("items/" + key).remove();
-      }
-    }
-
-    db.ref("items").on("value", (snapshot) => {
-      const data = snapshot.val() || {};
-      renderTable(data);
+      renderTable(filtered);
     });
+  }
 
-    searchBtn.addEventListener("click", () => {
-      db.ref("items").once("value").then(snapshot => {
-        const data = snapshot.val() || {};
-        renderTable(data);
-      });
-    });
-
-    searchInput.addEventListener("input", () => {
-      db.ref("items").once("value").then(snapshot => {
-        const data = snapshot.val() || {};
-        renderTable(data);
-      });
-    });
-  </script>
+  db.ref("items").on("value", (snapshot) => {
+    const data = snapshot.val() || {};
+    renderTable(data);
+  });
+</script>
 </body>
 </html>
