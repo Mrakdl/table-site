@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Таблица предметов</title>
   <style>
     body { background: #2e2e3e; color: #eee; font-family: sans-serif; padding: 20px; }
@@ -11,16 +11,26 @@
       border: 1px solid #666;
       padding: 6px 10px;
       margin: 5px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #5f4b8b;
+      border-color: #8a70d6;
+      cursor: pointer;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
       background: #3b3b54;
+      border-radius: 6px;
+      overflow: hidden;
     }
     th, td {
       border: 1px solid #666;
       padding: 8px;
+      text-align: left;
     }
     th {
       background: #5f4b8b;
@@ -28,25 +38,28 @@
     tbody tr:hover {
       background: #574479;
     }
+    #csvInput {
+      padding: 3px;
+    }
   </style>
 </head>
 <body>
 
 <h2>Импорт предметов из CSV</h2>
-<input type="file" id="csvInput" accept=".csv">
+<input type="file" id="csvInput" accept=".csv" />
 <button onclick="importCSV()">Загрузить CSV</button>
 
 <h2>Добавление / редактирование</h2>
-<input id="mod" placeholder="Мод">
-<input id="itemId" placeholder="ID" type="number">
-<input id="meta" placeholder="Meta" type="number">
-<input id="itemName" placeholder="Название">
-<input id="priceMin" placeholder="Мин. цена" type="number">
-<input id="priceMax" placeholder="Макс. цена" type="number">
+<input id="mod" placeholder="Mod" />
+<input id="itemId" placeholder="ID" type="number" />
+<input id="meta" placeholder="Meta" type="number" />
+<input id="itemName" placeholder="Название" />
+<input id="priceMin" placeholder="Мин. цена" type="number" />
+<input id="priceMax" placeholder="Макс. цена" type="number" />
 <button id="saveBtn" onclick="saveItem()">Добавить</button>
 
 <h2>Поиск</h2>
-<input id="search" placeholder="minecraft:planks:2">
+<input id="search" placeholder="minecraft:planks:2" />
 <button onclick="applySearch()">Искать</button>
 
 <h2>Таблица предметов</h2>
@@ -91,20 +104,28 @@
 
     const reader = new FileReader();
     reader.onload = function (e) {
-      const lines = e.target.result.split("\n");
-      lines.shift(); // Пропускаем заголовок
+      const text = e.target.result.trim();
+      const lines = text.split(/\r?\n/);
+      lines.shift(); // пропускаем заголовок
+
       lines.forEach(line => {
-        const [raw, name] = line.split(",");
-        if (!raw || !name) return;
-        const parts = raw.trim().split(":");
+        if (!line.trim()) return; // пропускаем пустые строки
+        // Разбиваем на 2 части только по первой запятой
+        const commaIndex = line.indexOf(",");
+        if (commaIndex === -1) return; // нет запятой, пропускаем
+
+        const raw = line.slice(0, commaIndex).trim();
+        const name = line.slice(commaIndex + 1).trim();
+
+        const parts = raw.split(":");
         if (parts.length !== 3) return;
 
         const [mod, itemId, meta] = parts;
         const item = {
-          mod: mod.trim(),
-          itemId: itemId.trim(),
-          meta: meta.trim(),
-          itemName: name.trim(),
+          mod,
+          itemId,
+          meta,
+          itemName: name,
           priceMin: "",
           priceMax: ""
         };
@@ -124,7 +145,10 @@
       priceMax: document.getElementById("priceMax").value.trim()
     };
 
-    if (!item.mod || !item.itemId || !item.itemName) return alert("Mod, ID и название обязательны");
+    if (!item.mod || !item.itemId || !item.itemName) {
+      alert("Mod, ID и название обязательны");
+      return;
+    }
 
     if (editingKey) {
       db.ref("items/" + editingKey).set(item);
@@ -199,10 +223,12 @@
     });
   }
 
-  db.ref("items").on("value", (snapshot) => {
+  // Автообновление таблицы при изменениях в базе
+  db.ref("items").on("value", snapshot => {
     const data = snapshot.val() || {};
     renderTable(data);
   });
 </script>
+
 </body>
 </html>
