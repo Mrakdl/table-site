@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Таблица предметов</title>
   <style>
     :root {
@@ -66,7 +66,6 @@
       padding: 10px;
       text-align: left;
       border: 1px solid var(--border);
-      vertical-align: middle;
     }
 
     th {
@@ -78,12 +77,10 @@
     }
 
     .item-icon {
-      width: 32px;
-      height: 32px;
+      width: 24px;
+      height: 24px;
       vertical-align: middle;
       margin-right: 8px;
-      border-radius: 4px;
-      object-fit: contain;
     }
 
     @media (max-width: 768px) {
@@ -133,7 +130,6 @@
   <input id="itemName" placeholder="Название" />
   <input id="priceMin" placeholder="Мин. цена" type="number" />
   <input id="priceMax" placeholder="Макс. цена" type="number" />
-  <input id="img" placeholder="Ссылка на иконку (img)" />
   <button id="saveBtn" onclick="saveItem()">Добавить</button>
 </div>
 
@@ -186,7 +182,6 @@
       itemName: document.getElementById("itemName").value.trim(),
       priceMin: document.getElementById("priceMin").value.trim(),
       priceMax: document.getElementById("priceMax").value.trim(),
-      img: document.getElementById("img").value.trim()
     };
 
     if (!item.mod || !item.itemId || !item.itemName) {
@@ -195,9 +190,13 @@
     }
 
     if (editingKey) {
-      db.ref("items/" + editingKey).set(item);
-      editingKey = null;
-      document.getElementById("saveBtn").innerText = "Добавить";
+      db.ref("items/" + editingKey).once("value").then(snapshot => {
+        const existing = snapshot.val() || {};
+        item.img = existing.img || ""; // сохраняем img из базы
+        db.ref("items/" + editingKey).set(item);
+        editingKey = null;
+        document.getElementById("saveBtn").innerText = "Добавить";
+      });
     } else {
       db.ref("items").push(item);
     }
@@ -206,7 +205,7 @@
   }
 
   function clearForm() {
-    ["mod", "itemId", "meta", "itemName", "priceMin", "priceMax", "img"].forEach(id => {
+    ["mod", "itemId", "meta", "itemName", "priceMin", "priceMax"].forEach(id => {
       document.getElementById(id).value = "";
     });
   }
@@ -214,23 +213,19 @@
   function renderTable(data) {
     const tableBody = document.getElementById("tableBody");
     tableBody.innerHTML = "";
-
     Object.entries(data).forEach(([key, item]) => {
-      const iconHTML = item.img
-        ? `<img src="${item.img}" alt="Icon" class="item-icon" />`
-        : "";
-
       const tr = document.createElement("tr");
+      const icon = item.img ? `<img src="${item.img}" alt="иконка" class="item-icon" />` : "";
       tr.innerHTML = `
         <td data-label="Mod">${item.mod}</td>
         <td data-label="ID">${item.itemId}</td>
         <td data-label="Meta">${item.meta}</td>
-        <td data-label="Название">${iconHTML}${item.itemName}</td>
+        <td data-label="Название">${icon}${item.itemName}</td>
         <td data-label="Мин">${item.priceMin || ""}</td>
         <td data-label="Макс">${item.priceMax || ""}</td>
         <td data-label="Действия">
-          <button onclick='editItem("${key}", ${JSON.stringify(item).replace(/"/g, '&quot;')})'>Изменить</button>
-          <button onclick='deleteItem("${key}")'>Удалить</button>
+          <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">Изменить</button>
+          <button onclick="deleteItem('${key}')">Удалить</button>
         </td>
       `;
       tableBody.appendChild(tr);
@@ -244,7 +239,6 @@
     document.getElementById("itemName").value = item.itemName;
     document.getElementById("priceMin").value = item.priceMin || "";
     document.getElementById("priceMax").value = item.priceMax || "";
-    document.getElementById("img").value = item.img || "";
     editingKey = key;
     document.getElementById("saveBtn").innerText = "Сохранить";
   }
