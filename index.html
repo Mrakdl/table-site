@@ -4,50 +4,75 @@
   <meta charset="UTF-8" />
   <title>Таблица предметов</title>
   <style>
-    body { background: #2e2e3e; color: #eee; font-family: sans-serif; padding: 20px; }
-    input, button {
-      background: #444;
+    body {
+      background: #1e1e2f;
       color: #eee;
-      border: 1px solid #666;
-      padding: 6px 10px;
-      margin: 5px;
-      border-radius: 4px;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 40px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h2 {
+      color: #cfcfff;
+      border-bottom: 1px solid #444;
+      padding-bottom: 4px;
+      margin-top: 40px;
+    }
+
+    input, button {
+      background: #2d2d44;
+      color: #eee;
+      border: 1px solid #555;
+      padding: 8px 12px;
+      margin: 6px 4px 12px 0;
+      border-radius: 5px;
       font-size: 14px;
     }
+
     button:hover {
       background: #5f4b8b;
       border-color: #8a70d6;
       cursor: pointer;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
-      background: #3b3b54;
-      border-radius: 6px;
+      background: #2c2c3f;
+      border-radius: 8px;
       overflow: hidden;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
     }
+
     th, td {
-      border: 1px solid #666;
-      padding: 8px;
+      border: 1px solid #444;
+      padding: 10px;
       text-align: left;
+      font-size: 14px;
     }
+
     th {
-      background: #5f4b8b;
+      background: #3e2f5e;
+      color: #fff;
     }
+
     tbody tr:hover {
-      background: #574479;
+      background: #403356;
     }
-    #csvInput {
-      padding: 3px;
+
+    #tableBody button {
+      font-size: 13px;
+    }
+
+    input:focus, button:focus {
+      outline: 2px solid #8a70d6;
+      outline-offset: 1px;
     }
   </style>
 </head>
 <body>
-
-<h2>Импорт предметов из CSV</h2>
-<input type="file" id="csvInput" accept=".csv" />
-<button onclick="importCSV()">Загрузить CSV</button>
 
 <h2>Добавление / редактирование</h2>
 <input id="mod" placeholder="Mod" />
@@ -96,44 +121,6 @@
   const db = firebase.database();
 
   let editingKey = null;
-
-  function importCSV() {
-    const fileInput = document.getElementById("csvInput");
-    const file = fileInput.files[0];
-    if (!file) return alert("Выберите CSV-файл");
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const text = e.target.result.trim();
-      const lines = text.split(/\r?\n/);
-      lines.shift(); // пропускаем заголовок
-
-      lines.forEach(line => {
-        if (!line.trim()) return; // пропускаем пустые строки
-        // Разбиваем на 2 части только по первой запятой
-        const commaIndex = line.indexOf(",");
-        if (commaIndex === -1) return; // нет запятой, пропускаем
-
-        const raw = line.slice(0, commaIndex).trim();
-        const name = line.slice(commaIndex + 1).trim();
-
-        const parts = raw.split(":");
-        if (parts.length !== 3) return;
-
-        const [mod, itemId, meta] = parts;
-        const item = {
-          mod,
-          itemId,
-          meta,
-          itemName: name,
-          priceMin: "",
-          priceMax: ""
-        };
-        db.ref("items").push(item);
-      });
-    };
-    reader.readAsText(file);
-  }
 
   function saveItem() {
     const item = {
@@ -223,7 +210,6 @@
     });
   }
 
-  // Автообновление таблицы при изменениях в базе
   db.ref("items").on("value", snapshot => {
     const data = snapshot.val() || {};
     renderTable(data);
