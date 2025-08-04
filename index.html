@@ -121,13 +121,13 @@
       <th>Название</th>
       <th>Мин</th>
       <th>Макс</th>
+      <th>Кол-во</th>
       <th>Действия</th>
     </tr>
   </thead>
   <tbody id="tableBody"></tbody>
 </table>
 
-<!-- Модальное окно -->
 <div class="modal" id="editModal">
   <div class="modal-content">
     <div class="modal-header">Редактирование предмета</div>
@@ -138,6 +138,7 @@
       <input id="editItemName" placeholder="Название" />
       <input id="editPriceMin" placeholder="Мин. цена" type="number" />
       <input id="editPriceMax" placeholder="Макс. цена" type="number" />
+      <input id="editCount" placeholder="Количество" type="number" />
     </div>
     <div class="modal-footer">
       <button onclick="closeModal()">Отмена</button>
@@ -164,6 +165,7 @@
   const db = firebase.database();
 
   let editingKey = null;
+  let currentSearch = "";
 
   function renderTable(data) {
     const tableBody = document.getElementById("tableBody");
@@ -180,6 +182,7 @@
         </td>
         <td>${item.priceMin || ""}</td>
         <td>${item.priceMax || ""}</td>
+        <td>${item.count || ""}</td>
         <td>
           <button onclick='openEditModal("${key}")'>Изменить</button>
           <button onclick='deleteItem("${key}")'>Удалить</button>
@@ -200,6 +203,7 @@
       document.getElementById("editItemName").value = item.itemName;
       document.getElementById("editPriceMin").value = item.priceMin || "";
       document.getElementById("editPriceMax").value = item.priceMax || "";
+      document.getElementById("editCount").value = item.count || "";
       editingKey = key;
 
       document.getElementById("editModal").classList.add("show");
@@ -221,6 +225,7 @@
       itemName: document.getElementById("editItemName").value.trim(),
       priceMin: document.getElementById("editPriceMin").value.trim(),
       priceMax: document.getElementById("editPriceMax").value.trim(),
+      count: document.getElementById("editCount").value.trim()
     };
 
     db.ref("items/" + editingKey).once("value").then(snapshot => {
@@ -229,18 +234,20 @@
 
       db.ref("items/" + editingKey).set(updatedItem).then(() => {
         closeModal();
+        applySearch(); 
       });
     });
   }
 
   function deleteItem(key) {
     if (confirm("Удалить этот предмет?")) {
-      db.ref("items/" + key).remove();
+      db.ref("items/" + key).remove().then(() => applySearch());
     }
   }
 
   function applySearch() {
     const query = document.getElementById("search").value.trim().toLowerCase();
+    currentSearch = query;
     db.ref("items").once("value").then(snapshot => {
       const data = snapshot.val() || {};
       const filtered = {};
@@ -255,8 +262,9 @@
   }
 
   db.ref("items").on("value", snapshot => {
-    const data = snapshot.val() || {};
-    renderTable(data);
+    if (!currentSearch) {
+      renderTable(snapshot.val() || {});
+    }
   });
 </script>
 </body>
