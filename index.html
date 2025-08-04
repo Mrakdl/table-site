@@ -1,70 +1,95 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Таблица предметов</title>
   <style>
     body {
-      font-family: sans-serif;
-      background-color: #1e1e1e;
+      background: #1e1e2f;
       color: #eee;
-      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 40px;
+    }
+    h2 {
+      color: #c9bfff;
+      margin-top: 40px;
+    }
+    input[type="file"], input, button {
+      background: #2c2c40;
+      color: #eee;
+      border: 1px solid #555;
+      padding: 8px 12px;
+      margin: 6px 4px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    input:focus, button:hover {
+      outline: none;
+      background: #39395c;
+    }
+    button {
+      cursor: pointer;
+      transition: background 0.2s;
     }
     table {
-      border-collapse: collapse;
       width: 100%;
-      margin-top: 10px;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #2a2a3e;
+      border-radius: 6px;
+      overflow: hidden;
     }
     th, td {
       border: 1px solid #444;
-      padding: 8px;
+      padding: 10px;
       text-align: left;
+      font-size: 14px;
     }
-    input, button {
-      margin: 4px;
-      padding: 6px;
-      background-color: #2e2e2e;
-      border: 1px solid #555;
-      color: #eee;
+    th {
+      background: #4b3b8f;
+      color: #fff;
     }
-    button:hover {
-      background-color: #444;
-      cursor: pointer;
+    tbody tr:hover {
+      background: #3d3463;
     }
-    .danger {
-      background-color: #700;
-      border-color: #a00;
-    }
-    .danger:hover {
-      background-color: #900;
+    .actions button {
+      margin-right: 4px;
     }
   </style>
 </head>
 <body>
+
   <h1>📦 Таблица предметов</h1>
 
-  <button onclick="clearDatabase()" class="danger">🗑 Удалить всё</button>
+  <h2>Импорт предметов из CSV</h2>
+  <input type="file" id="csvInput" accept=".csv">
+  <button onclick="importCSV()">Загрузить CSV</button>
+
+  <h2>Добавление / редактирование</h2>
+  <div>
+    <input id="mod" placeholder="Мод">
+    <input id="itemId" placeholder="ID" type="number">
+    <input id="meta" placeholder="Meta" type="number">
+    <input id="itemName" placeholder="Название">
+    <input id="priceMin" placeholder="Мин. цена" type="number">
+    <input id="priceMax" placeholder="Макс. цена" type="number">
+    <button id="saveBtn" onclick="saveItem()">Добавить</button>
+  </div>
 
   <h2>Поиск</h2>
   <input id="search" placeholder="minecraft:planks:2">
   <button onclick="applySearch()">Искать</button>
 
-  <h2>Добавить / Редактировать</h2>
-  <input id="mod" placeholder="Мод">
-  <input id="itemId" placeholder="ID" type="number">
-  <input id="meta" placeholder="Meta" type="number">
-  <input id="itemName" placeholder="Название">
-  <input id="priceMin" placeholder="Цена MIN" type="number">
-  <input id="priceMax" placeholder="Цена MAX" type="number">
-  <button onclick="addOrUpdateItem()">Добавить</button>
-
+  <h2>Таблица предметов</h2>
   <table>
     <thead>
       <tr>
-        <th>Mod:Item:Meta</th>
+        <th>Mod</th>
+        <th>ID</th>
+        <th>Meta</th>
         <th>Название</th>
-        <th>Цена MIN</th>
-        <th>Цена MAX</th>
+        <th>Мин</th>
+        <th>Макс</th>
         <th>Действия</th>
       </tr>
     </thead>
@@ -73,7 +98,6 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
@@ -89,25 +113,56 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let editKey = null;
+    let editingKey = null;
 
-    function addOrUpdateItem() {
-      const mod = document.getElementById("mod").value.trim();
-      const itemId = document.getElementById("itemId").value.trim();
-      const meta = document.getElementById("meta").value.trim();
-      const itemName = document.getElementById("itemName").value.trim();
-      const priceMin = document.getElementById("priceMin").value.trim();
-      const priceMax = document.getElementById("priceMax").value.trim();
+    function importCSV() {
+      const file = document.getElementById("csvInput").files[0];
+      if (!file) return alert("Выберите CSV-файл");
 
-      if (!mod || !itemId || !meta || !itemName) return alert("Заполните все поля");
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const lines = e.target.result.split("\n");
+        lines.shift(); // Пропуск заголовка
+        lines.forEach(line => {
+          const [raw, name] = line.split(",");
+          if (!raw || !name) return;
+          const parts = raw.trim().split(":");
+          if (parts.length !== 3) return;
+          const [mod, itemId, meta] = parts;
+          const item = {
+            mod: mod.trim(),
+            itemId: itemId.trim(),
+            meta: meta.trim(),
+            itemName: name.trim(),
+            priceMin: "",
+            priceMax: ""
+          };
+          db.ref("items").push(item);
+        });
+      };
+      reader.readAsText(file);
+    }
 
-      const data = { mod, itemId, meta, itemName, priceMin, priceMax };
+    function saveItem() {
+      const item = {
+        mod: document.getElementById("mod").value.trim(),
+        itemId: document.getElementById("itemId").value.trim(),
+        meta: document.getElementById("meta").value.trim(),
+        itemName: document.getElementById("itemName").value.trim(),
+        priceMin: document.getElementById("priceMin").value.trim(),
+        priceMax: document.getElementById("priceMax").value.trim()
+      };
 
-      if (editKey) {
-        db.ref("items/" + editKey).set(data);
-        editKey = null;
+      if (!item.mod || !item.itemId || !item.itemName) {
+        return alert("Mod, ID и название — обязательны");
+      }
+
+      if (editingKey) {
+        db.ref("items/" + editingKey).set(item);
+        editingKey = null;
+        document.getElementById("saveBtn").innerText = "Добавить";
       } else {
-        db.ref("items").push(data);
+        db.ref("items").push(item);
       }
 
       clearForm();
@@ -120,43 +175,35 @@
     }
 
     function renderTable(data) {
-      const tableBody = document.getElementById("tableBody");
-      tableBody.innerHTML = "";
-
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
       Object.entries(data).forEach(([key, item]) => {
-        const row = document.createElement("tr");
-
-        const fullId = `${item.mod}:${item.itemId}:${item.meta}`;
-
-        row.innerHTML = `
-          <td>${fullId}</td>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.mod}</td>
+          <td>${item.itemId}</td>
+          <td>${item.meta}</td>
           <td>${item.itemName}</td>
           <td>${item.priceMin || ""}</td>
           <td>${item.priceMax || ""}</td>
-          <td>
-            <button onclick="editItem('${key}')">✏️</button>
-            <button onclick="deleteItem('${key}')" class="danger">🗑</button>
+          <td class="actions">
+            <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">✏️</button>
+            <button onclick="deleteItem('${key}')">🗑</button>
           </td>
         `;
-
-        tableBody.appendChild(row);
+        tbody.appendChild(tr);
       });
     }
 
-    function editItem(key) {
-      db.ref("items/" + key).once("value").then(snapshot => {
-        const item = snapshot.val();
-        if (!item) return;
-
-        document.getElementById("mod").value = item.mod;
-        document.getElementById("itemId").value = item.itemId;
-        document.getElementById("meta").value = item.meta;
-        document.getElementById("itemName").value = item.itemName;
-        document.getElementById("priceMin").value = item.priceMin;
-        document.getElementById("priceMax").value = item.priceMax;
-
-        editKey = key;
-      });
+    function editItem(key, item) {
+      document.getElementById("mod").value = item.mod;
+      document.getElementById("itemId").value = item.itemId;
+      document.getElementById("meta").value = item.meta;
+      document.getElementById("itemName").value = item.itemName;
+      document.getElementById("priceMin").value = item.priceMin;
+      document.getElementById("priceMax").value = item.priceMax;
+      editingKey = key;
+      document.getElementById("saveBtn").innerText = "Сохранить";
     }
 
     function deleteItem(key) {
@@ -167,28 +214,17 @@
 
     function applySearch() {
       const query = document.getElementById("search").value.trim().toLowerCase();
-
       db.ref("items").once("value").then(snapshot => {
         const data = snapshot.val() || {};
         const filtered = {};
-
         Object.entries(data).forEach(([key, item]) => {
           const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
           if (fullId.includes(query)) {
             filtered[key] = item;
           }
         });
-
         renderTable(filtered);
       });
-    }
-
-    function clearDatabase() {
-      if (confirm("Вы уверены, что хотите удалить ВСЕ предметы?")) {
-        db.ref("items").remove()
-          .then(() => alert("Все данные удалены."))
-          .catch((error) => alert("Ошибка: " + error));
-      }
     }
 
     db.ref("items").on("value", (snapshot) => {
