@@ -4,233 +4,205 @@
   <meta charset="UTF-8">
   <title>Таблица предметов</title>
   <style>
-    body {
-      background: #1e1e2f;
+    body { background: #2e2e3e; color: #eee; font-family: sans-serif; padding: 20px; }
+    input, button {
+      background: #444;
       color: #eee;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 40px;
-    }
-    h2 {
-      color: #c9bfff;
-      margin-top: 40px;
-    }
-    input[type="file"], input, button {
-      background: #2c2c40;
-      color: #eee;
-      border: 1px solid #555;
-      padding: 8px 12px;
-      margin: 6px 4px;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    input:focus, button:hover {
-      outline: none;
-      background: #39395c;
-    }
-    button {
-      cursor: pointer;
-      transition: background 0.2s;
+      border: 1px solid #666;
+      padding: 6px 10px;
+      margin: 5px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
-      background: #2a2a3e;
-      border-radius: 6px;
-      overflow: hidden;
+      background: #3b3b54;
     }
     th, td {
-      border: 1px solid #444;
-      padding: 10px;
-      text-align: left;
-      font-size: 14px;
+      border: 1px solid #666;
+      padding: 8px;
     }
     th {
-      background: #4b3b8f;
-      color: #fff;
+      background: #5f4b8b;
     }
     tbody tr:hover {
-      background: #3d3463;
-    }
-    .actions button {
-      margin-right: 4px;
+      background: #574479;
     }
   </style>
 </head>
 <body>
 
-  <h1>📦 Таблица предметов</h1>
+<h2>Импорт предметов из CSV</h2>
+<input type="file" id="csvInput" accept=".csv">
+<button onclick="importCSV()">Загрузить CSV</button>
 
-  <h2>Импорт предметов из CSV</h2>
-  <input type="file" id="csvInput" accept=".csv">
-  <button onclick="importCSV()">Загрузить CSV</button>
+<h2>Добавление / редактирование</h2>
+<input id="mod" placeholder="Мод">
+<input id="itemId" placeholder="ID" type="number">
+<input id="meta" placeholder="Meta" type="number">
+<input id="itemName" placeholder="Название">
+<input id="priceMin" placeholder="Мин. цена" type="number">
+<input id="priceMax" placeholder="Макс. цена" type="number">
+<button id="saveBtn" onclick="saveItem()">Добавить</button>
 
-  <h2>Добавление / редактирование</h2>
-  <div>
-    <input id="mod" placeholder="Мод">
-    <input id="itemId" placeholder="ID" type="number">
-    <input id="meta" placeholder="Meta" type="number">
-    <input id="itemName" placeholder="Название">
-    <input id="priceMin" placeholder="Мин. цена" type="number">
-    <input id="priceMax" placeholder="Макс. цена" type="number">
-    <button id="saveBtn" onclick="saveItem()">Добавить</button>
-  </div>
+<h2>Поиск</h2>
+<input id="search" placeholder="minecraft:planks:2">
+<button onclick="applySearch()">Искать</button>
 
-  <h2>Поиск</h2>
-  <input id="search" placeholder="minecraft:planks:2">
-  <button onclick="applySearch()">Искать</button>
+<h2>Таблица предметов</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Mod</th>
+      <th>ID</th>
+      <th>Meta</th>
+      <th>Название</th>
+      <th>Мин</th>
+      <th>Макс</th>
+      <th>Действия</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
 
-  <h2>Таблица предметов</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Mod</th>
-        <th>ID</th>
-        <th>Meta</th>
-        <th>Название</th>
-        <th>Мин</th>
-        <th>Макс</th>
-        <th>Действия</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
+    authDomain: "items-table.firebaseapp.com",
+    databaseURL: "https://items-table-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "items-table",
+    storageBucket: "items-table.firebasestorage.app",
+    messagingSenderId: "6458579493",
+    appId: "1:6458579493:web:2cae8479d416be37723dcc",
+    measurementId: "G-E3B59T1VYJ"
+  };
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDQmevn7yx4_V_s9WnGVHx_s91jboqMtVY",
-      authDomain: "items-table.firebaseapp.com",
-      databaseURL: "https://items-table-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "items-table",
-      storageBucket: "items-table.firebasestorage.app",
-      messagingSenderId: "6458579493",
-      appId: "1:6458579493:web:2cae8479d416be37723dcc",
-      measurementId: "G-E3B59T1VYJ"
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let editingKey = null;
+
+  function importCSV() {
+    const fileInput = document.getElementById("csvInput");
+    const file = fileInput.files[0];
+    if (!file) return alert("Выберите CSV-файл");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const lines = e.target.result.split("\n");
+      lines.shift(); // Пропускаем заголовок
+      lines.forEach(line => {
+        const [raw, name] = line.split(",");
+        if (!raw || !name) return;
+        const parts = raw.trim().split(":");
+        if (parts.length !== 3) return;
+
+        const [mod, itemId, meta] = parts;
+        const item = {
+          mod: mod.trim(),
+          itemId: itemId.trim(),
+          meta: meta.trim(),
+          itemName: name.trim(),
+          priceMin: "",
+          priceMax: ""
+        };
+        db.ref("items").push(item);
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  function saveItem() {
+    const item = {
+      mod: document.getElementById("mod").value.trim(),
+      itemId: document.getElementById("itemId").value.trim(),
+      meta: document.getElementById("meta").value.trim(),
+      itemName: document.getElementById("itemName").value.trim(),
+      priceMin: document.getElementById("priceMin").value.trim(),
+      priceMax: document.getElementById("priceMax").value.trim()
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    if (!item.mod || !item.itemId || !item.itemName) return alert("Mod, ID и название обязательны");
 
-    let editingKey = null;
-
-    function importCSV() {
-      const file = document.getElementById("csvInput").files[0];
-      if (!file) return alert("Выберите CSV-файл");
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const lines = e.target.result.split("\n");
-        lines.shift(); // Пропуск заголовка
-        lines.forEach(line => {
-          const [raw, name] = line.split(",");
-          if (!raw || !name) return;
-          const parts = raw.trim().split(":");
-          if (parts.length !== 3) return;
-          const [mod, itemId, meta] = parts;
-          const item = {
-            mod: mod.trim(),
-            itemId: itemId.trim(),
-            meta: meta.trim(),
-            itemName: name.trim(),
-            priceMin: "",
-            priceMax: ""
-          };
-          db.ref("items").push(item);
-        });
-      };
-      reader.readAsText(file);
+    if (editingKey) {
+      db.ref("items/" + editingKey).set(item);
+      editingKey = null;
+      document.getElementById("saveBtn").innerText = "Добавить";
+    } else {
+      db.ref("items").push(item);
     }
 
-    function saveItem() {
-      const item = {
-        mod: document.getElementById("mod").value.trim(),
-        itemId: document.getElementById("itemId").value.trim(),
-        meta: document.getElementById("meta").value.trim(),
-        itemName: document.getElementById("itemName").value.trim(),
-        priceMin: document.getElementById("priceMin").value.trim(),
-        priceMax: document.getElementById("priceMax").value.trim()
-      };
+    clearForm();
+  }
 
-      if (!item.mod || !item.itemId || !item.itemName) {
-        return alert("Mod, ID и название — обязательны");
-      }
+  function clearForm() {
+    document.getElementById("mod").value = "";
+    document.getElementById("itemId").value = "";
+    document.getElementById("meta").value = "";
+    document.getElementById("itemName").value = "";
+    document.getElementById("priceMin").value = "";
+    document.getElementById("priceMax").value = "";
+  }
 
-      if (editingKey) {
-        db.ref("items/" + editingKey).set(item);
-        editingKey = null;
-        document.getElementById("saveBtn").innerText = "Добавить";
-      } else {
-        db.ref("items").push(item);
-      }
-
-      clearForm();
-    }
-
-    function clearForm() {
-      ["mod", "itemId", "meta", "itemName", "priceMin", "priceMax"].forEach(id => {
-        document.getElementById(id).value = "";
-      });
-    }
-
-    function renderTable(data) {
-      const tbody = document.getElementById("tableBody");
-      tbody.innerHTML = "";
-      Object.entries(data).forEach(([key, item]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${item.mod}</td>
-          <td>${item.itemId}</td>
-          <td>${item.meta}</td>
-          <td>${item.itemName}</td>
-          <td>${item.priceMin || ""}</td>
-          <td>${item.priceMax || ""}</td>
-          <td class="actions">
-            <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">✏️</button>
-            <button onclick="deleteItem('${key}')">🗑</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function editItem(key, item) {
-      document.getElementById("mod").value = item.mod;
-      document.getElementById("itemId").value = item.itemId;
-      document.getElementById("meta").value = item.meta;
-      document.getElementById("itemName").value = item.itemName;
-      document.getElementById("priceMin").value = item.priceMin;
-      document.getElementById("priceMax").value = item.priceMax;
-      editingKey = key;
-      document.getElementById("saveBtn").innerText = "Сохранить";
-    }
-
-    function deleteItem(key) {
-      if (confirm("Удалить этот предмет?")) {
-        db.ref("items/" + key).remove();
-      }
-    }
-
-    function applySearch() {
-      const query = document.getElementById("search").value.trim().toLowerCase();
-      db.ref("items").once("value").then(snapshot => {
-        const data = snapshot.val() || {};
-        const filtered = {};
-        Object.entries(data).forEach(([key, item]) => {
-          const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
-          if (fullId.includes(query)) {
-            filtered[key] = item;
-          }
-        });
-        renderTable(filtered);
-      });
-    }
-
-    db.ref("items").on("value", (snapshot) => {
-      const data = snapshot.val() || {};
-      renderTable(data);
+  function renderTable(data) {
+    const tableBody = document.getElementById("tableBody");
+    tableBody.innerHTML = "";
+    Object.entries(data).forEach(([key, item]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.mod}</td>
+        <td>${item.itemId}</td>
+        <td>${item.meta}</td>
+        <td>${item.itemName}</td>
+        <td>${item.priceMin || ""}</td>
+        <td>${item.priceMax || ""}</td>
+        <td>
+          <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">Изменить</button>
+          <button onclick="deleteItem('${key}')">Удалить</button>
+        </td>
+      `;
+      tableBody.appendChild(tr);
     });
-  </script>
+  }
+
+  function editItem(key, item) {
+    document.getElementById("mod").value = item.mod;
+    document.getElementById("itemId").value = item.itemId;
+    document.getElementById("meta").value = item.meta;
+    document.getElementById("itemName").value = item.itemName;
+    document.getElementById("priceMin").value = item.priceMin || "";
+    document.getElementById("priceMax").value = item.priceMax || "";
+    editingKey = key;
+    document.getElementById("saveBtn").innerText = "Сохранить";
+  }
+
+  function deleteItem(key) {
+    if (confirm("Удалить этот предмет?")) {
+      db.ref("items/" + key).remove();
+    }
+  }
+
+  function applySearch() {
+    const query = document.getElementById("search").value.trim().toLowerCase();
+    db.ref("items").once("value").then(snapshot => {
+      const data = snapshot.val() || {};
+      const filtered = {};
+      Object.entries(data).forEach(([key, item]) => {
+        const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
+        if (fullId.includes(query)) {
+          filtered[key] = item;
+        }
+      });
+      renderTable(filtered);
+    });
+  }
+
+  db.ref("items").on("value", (snapshot) => {
+    const data = snapshot.val() || {};
+    renderTable(data);
+  });
+</script>
 </body>
 </html>
