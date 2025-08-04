@@ -2,105 +2,135 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Таблица предметов</title>
   <style>
+    :root {
+      --bg: #1e1e2e;
+      --card: #2e2e3e;
+      --accent: #5f4b8b;
+      --text: #eee;
+      --border: #666;
+      --hover: #3e3e5a;
+    }
+
     body {
-      background: #1e1e2f;
-      color: #eee;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 40px;
-      max-width: 1000px;
-      margin: auto;
+      margin: 0;
+      padding: 20px;
+      font-family: "Segoe UI", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
     }
 
     h2 {
-      color: #cfcfff;
-      border-bottom: 1px solid #444;
-      padding-bottom: 4px;
-      margin-top: 40px;
+      margin-top: 30px;
+      color: var(--text);
+    }
+
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
     input, button {
-      background: #2d2d44;
-      color: #eee;
-      border: 1px solid #555;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
       padding: 8px 12px;
-      margin: 6px 4px 12px 0;
       border-radius: 5px;
       font-size: 14px;
     }
 
-    button:hover {
-      background: #5f4b8b;
-      border-color: #8a70d6;
+    button {
       cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: var(--accent);
+      border-color: #8a70d6;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
+      background: var(--card);
       margin-top: 20px;
-      background: #2c2c3f;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
     }
 
     th, td {
-      border: 1px solid #444;
       padding: 10px;
       text-align: left;
-      font-size: 14px;
+      border: 1px solid var(--border);
     }
 
     th {
-      background: #3e2f5e;
-      color: #fff;
+      background: var(--accent);
     }
 
     tbody tr:hover {
-      background: #403356;
+      background: var(--hover);
     }
 
-    input:focus, button:focus {
-      outline: 2px solid #8a70d6;
-      outline-offset: 1px;
-    }
+    @media (max-width: 768px) {
+      .input-group {
+        flex-direction: column;
+      }
 
-    .letter-filter {
-      margin: 20px 0;
-    }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
 
-    .letter-filter button {
-      width: 30px;
-      margin: 2px;
-      padding: 6px;
-      font-size: 13px;
-    }
+      thead {
+        display: none;
+      }
 
-    .letter-filter .active {
-      background: #8a70d6;
-      border-color: #fff;
+      tr {
+        margin-bottom: 10px;
+        background: var(--card);
+        padding: 10px;
+        border-radius: 6px;
+      }
+
+      td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+      }
+
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        font-weight: bold;
+        color: #bbb;
+      }
     }
   </style>
 </head>
 <body>
 
 <h2>Добавление / редактирование</h2>
-<input id="mod" placeholder="Mod" />
-<input id="itemId" placeholder="ID" type="number" />
-<input id="meta" placeholder="Meta" type="number" />
-<input id="itemName" placeholder="Название" />
-<input id="priceMin" placeholder="Мин. цена" type="number" />
-<input id="priceMax" placeholder="Макс. цена" type="number" />
-<button id="saveBtn" onclick="saveItem()">Добавить</button>
+<div class="input-group">
+  <input id="mod" placeholder="Mod" />
+  <input id="itemId" placeholder="ID" type="number" />
+  <input id="meta" placeholder="Meta" type="number" />
+  <input id="itemName" placeholder="Название" />
+  <input id="priceMin" placeholder="Мин. цена" type="number" />
+  <input id="priceMax" placeholder="Макс. цена" type="number" />
+  <button id="saveBtn" onclick="saveItem()">Добавить</button>
+</div>
 
 <h2>Поиск</h2>
-<input id="search" placeholder="minecraft:planks:2" />
-<button onclick="applySearch()">Искать</button>
-
-<h2>Фильтрация по первой букве mod</h2>
-<div class="letter-filter" id="letterFilter"></div>
+<div class="input-group">
+  <input id="search" placeholder="minecraft:planks:2" />
+  <button onclick="applySearch()">Искать</button>
+</div>
 
 <h2>Таблица предметов</h2>
 <table>
@@ -136,8 +166,6 @@
   const db = firebase.database();
 
   let editingKey = null;
-  let fullData = {};
-  let activeLetter = '';
 
   function saveItem() {
     const item = {
@@ -166,12 +194,9 @@
   }
 
   function clearForm() {
-    document.getElementById("mod").value = "";
-    document.getElementById("itemId").value = "";
-    document.getElementById("meta").value = "";
-    document.getElementById("itemName").value = "";
-    document.getElementById("priceMin").value = "";
-    document.getElementById("priceMax").value = "";
+    ["mod", "itemId", "meta", "itemName", "priceMin", "priceMax"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
   }
 
   function renderTable(data) {
@@ -180,13 +205,13 @@
     Object.entries(data).forEach(([key, item]) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${item.mod}</td>
-        <td>${item.itemId}</td>
-        <td>${item.meta}</td>
-        <td>${item.itemName}</td>
-        <td>${item.priceMin || ""}</td>
-        <td>${item.priceMax || ""}</td>
-        <td>
+        <td data-label="Mod">${item.mod}</td>
+        <td data-label="ID">${item.itemId}</td>
+        <td data-label="Meta">${item.meta}</td>
+        <td data-label="Название">${item.itemName}</td>
+        <td data-label="Мин">${item.priceMin || ""}</td>
+        <td data-label="Макс">${item.priceMax || ""}</td>
+        <td data-label="Действия">
           <button onclick="editItem('${key}', ${JSON.stringify(item).replace(/"/g, '&quot;')})">Изменить</button>
           <button onclick="deleteItem('${key}')">Удалить</button>
         </td>
@@ -214,79 +239,23 @@
 
   function applySearch() {
     const query = document.getElementById("search").value.trim().toLowerCase();
-    const filtered = {};
-    Object.entries(fullData).forEach(([key, item]) => {
-      const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
-      if (fullId.includes(query)) {
-        filtered[key] = item;
-      }
-    });
-    renderTable(filtered);
-  }
-
-  function renderLetterFilter() {
-    const container = document.getElementById("letterFilter");
-    container.innerHTML = "";
-
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-    const allBtn = document.createElement("button");
-    allBtn.textContent = "Все";
-    allBtn.onclick = () => {
-      activeLetter = "";
-      highlightActiveLetter();
-      renderTable(fullData);
-    };
-    container.appendChild(allBtn);
-
-    letters.forEach(letter => {
-      const btn = document.createElement("button");
-      btn.textContent = letter;
-      btn.onclick = () => {
-        activeLetter = letter;
-        filterByLetter();
-        highlightActiveLetter();
-      };
-      container.appendChild(btn);
+    db.ref("items").once("value").then(snapshot => {
+      const data = snapshot.val() || {};
+      const filtered = {};
+      Object.entries(data).forEach(([key, item]) => {
+        const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
+        if (fullId.includes(query)) {
+          filtered[key] = item;
+        }
+      });
+      renderTable(filtered);
     });
   }
 
-  function highlightActiveLetter() {
-    const buttons = document.querySelectorAll(".letter-filter button");
-    buttons.forEach(btn => {
-      btn.classList.remove("active");
-      if (btn.textContent === activeLetter || (activeLetter === "" && btn.textContent === "Все")) {
-        btn.classList.add("active");
-      }
-    });
-  }
-
-  function filterByLetter() {
-    if (!activeLetter) {
-      renderTable(fullData);
-      return;
-    }
-    const filtered = {};
-    Object.entries(fullData).forEach(([key, item]) => {
-      if (item.mod && item.mod[0]?.toUpperCase() === activeLetter) {
-        filtered[key] = item;
-      }
-    });
-    renderTable(filtered);
-  }
-
-  // Загружаем данные и рендерим
   db.ref("items").on("value", snapshot => {
-    fullData = snapshot.val() || {};
-    if (activeLetter) {
-      filterByLetter();
-    } else {
-      renderTable(fullData);
-    }
+    const data = snapshot.val() || {};
+    renderTable(data);
   });
-
-  // Инициализация фильтра
-  renderLetterFilter();
 </script>
-
 </body>
 </html>
