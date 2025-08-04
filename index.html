@@ -62,13 +62,25 @@
       background: #403356;
     }
 
-    #tableBody button {
-      font-size: 13px;
-    }
-
     input:focus, button:focus {
       outline: 2px solid #8a70d6;
       outline-offset: 1px;
+    }
+
+    .letter-filter {
+      margin: 20px 0;
+    }
+
+    .letter-filter button {
+      width: 30px;
+      margin: 2px;
+      padding: 6px;
+      font-size: 13px;
+    }
+
+    .letter-filter .active {
+      background: #8a70d6;
+      border-color: #fff;
     }
   </style>
 </head>
@@ -86,6 +98,9 @@
 <h2>Поиск</h2>
 <input id="search" placeholder="minecraft:planks:2" />
 <button onclick="applySearch()">Искать</button>
+
+<h2>Фильтрация по первой букве mod</h2>
+<div class="letter-filter" id="letterFilter"></div>
 
 <h2>Таблица предметов</h2>
 <table>
@@ -121,6 +136,8 @@
   const db = firebase.database();
 
   let editingKey = null;
+  let fullData = {};
+  let activeLetter = '';
 
   function saveItem() {
     const item = {
@@ -197,23 +214,78 @@
 
   function applySearch() {
     const query = document.getElementById("search").value.trim().toLowerCase();
-    db.ref("items").once("value").then(snapshot => {
-      const data = snapshot.val() || {};
-      const filtered = {};
-      Object.entries(data).forEach(([key, item]) => {
-        const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
-        if (fullId.includes(query)) {
-          filtered[key] = item;
-        }
-      });
-      renderTable(filtered);
+    const filtered = {};
+    Object.entries(fullData).forEach(([key, item]) => {
+      const fullId = `${item.mod}:${item.itemId}:${item.meta}`.toLowerCase();
+      if (fullId.includes(query)) {
+        filtered[key] = item;
+      }
+    });
+    renderTable(filtered);
+  }
+
+  function renderLetterFilter() {
+    const container = document.getElementById("letterFilter");
+    container.innerHTML = "";
+
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const allBtn = document.createElement("button");
+    allBtn.textContent = "Все";
+    allBtn.onclick = () => {
+      activeLetter = "";
+      highlightActiveLetter();
+      renderTable(fullData);
+    };
+    container.appendChild(allBtn);
+
+    letters.forEach(letter => {
+      const btn = document.createElement("button");
+      btn.textContent = letter;
+      btn.onclick = () => {
+        activeLetter = letter;
+        filterByLetter();
+        highlightActiveLetter();
+      };
+      container.appendChild(btn);
     });
   }
 
+  function highlightActiveLetter() {
+    const buttons = document.querySelectorAll(".letter-filter button");
+    buttons.forEach(btn => {
+      btn.classList.remove("active");
+      if (btn.textContent === activeLetter || (activeLetter === "" && btn.textContent === "Все")) {
+        btn.classList.add("active");
+      }
+    });
+  }
+
+  function filterByLetter() {
+    if (!activeLetter) {
+      renderTable(fullData);
+      return;
+    }
+    const filtered = {};
+    Object.entries(fullData).forEach(([key, item]) => {
+      if (item.mod && item.mod[0]?.toUpperCase() === activeLetter) {
+        filtered[key] = item;
+      }
+    });
+    renderTable(filtered);
+  }
+
+  // Загружаем данные и рендерим
   db.ref("items").on("value", snapshot => {
-    const data = snapshot.val() || {};
-    renderTable(data);
+    fullData = snapshot.val() || {};
+    if (activeLetter) {
+      filterByLetter();
+    } else {
+      renderTable(fullData);
+    }
   });
+
+  // Инициализация фильтра
+  renderLetterFilter();
 </script>
 
 </body>
